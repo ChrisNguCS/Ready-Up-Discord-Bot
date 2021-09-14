@@ -1,8 +1,10 @@
 import discord
 import os
+from discord import player
 import schedule
 import time
 import threading
+import sqlite3
 from threading import Thread
 from discord.ext import commands
 from discord.utils import get
@@ -30,27 +32,85 @@ async def on_ready():
 
 @commands.group(invoke_without_command=True)
 async def welcome(ctx):
-    await ctx.send('Hi, you can do -c to view all commands \nFor first time setup do -channel to set the channel')
+    await ctx.send('Hi, you can do -h to view all commands \nFor first time setup do -channel to set the channel')
+
+#Sets channel for bot use and also edits 
+@bot.command(name = 'sc', aliases = ['setchannel'])
+async def setChannel(ctx, channel:discord.TextChannel):
+    try:
+        if ctx.message.author.guild_permissions.manage_messages:
+            db = sqlite3.connect('main.sqlite')
+            cursor = db.cursor()
+            cursor.execute(f"SELECT channel_id FROM main WHERE guild_id = {ctx.guild.id}")
+            result = cursor.fetchone()
+            if result is None:
+                sql = ("INSERT INTO main(guild_id, channel_id) VALUES(?,?)")
+                val = (ctx.guild.id, channel.id)
+                await ctx.send(f"Channel has been set to {channel.mention}")
+            elif result is not None:
+                sql = ("UPDATE main SET channel_id = ? WHERE guild_id = ?")
+                val = (channel.id, ctx.guild.id)
+                await ctx.send(f"Channel has been updated to {channel.mention}")
+            cursor.execute(sql, val)
+            db.commit()
+            cursor.close()
+            db.close()
+    except(discord.ext.commands.errors.MissingRequiredArgument):
+        await ctx.send("Missing channel (-sc #channel)")
+
+
+@bot.command(name = 'sr', aliases = ['setrole'])
+async def setRole(ctx, role:discord.Role):
+    try:
+        if ctx.message.author.guild_permissions.manage_messages:
+            db = sqlite3.connect('main.sqlite')
+            cursor = db.cursor()
+            cursor.execute(f"SELECT role_id FROM main WHERE guild_id = {ctx.guild.id}")
+            result = cursor.fetchone()
+            if result is None:
+                sql = ("INSERT INTO main(guild_id, role_id) VALUES(?,?)")
+                val = (ctx.guild.id, role.id)
+                await ctx.send(f"Role to ping has been set to {role.mention}")
+            elif result is not None:
+                sql = ("UPDATE main SET role_id = ? WHERE guild_id = ?")
+                val = (role.id, ctx.guild.id)
+                await ctx.send(f"Role has been updated to {role.mention}")
+            cursor.execute(sql, val)
+            db.commit()
+            cursor.close()
+            db.close()
+    except(discord.ext.commands.errors.MissingRequiredArgument):
+        await ctx.send("Missing role (-sr @role)")
 
 
 #Readies players up and adds them to queue
 @bot.command(name = 'r', aliases = ['ready'])
 async def ready(ctx):
+    db = sqlite3.connect('main.sqlite')
+    cursor = db.cursor()
+    cursor.execute(f"SELECT role_id FROM main WHERE guild_id = {ctx.guild.id}")
+    guildID = cursor.fetchone()
     if ctx.author in playerlist:
         embed = discord.Embed(title = f"Cannot Ready", description= "User already ready", color = discord.Color.red())
         await ctx.send(embed=embed)
+        cursor.close()
+        db.close()
         return
         
     playerlist.append(ctx.author.mention)
     if len(playerlist) == 5:
         chonk = get(ctx.guild.roles, name= 'chonk')
-        embed = discord.Embed(title = f"(5/5) EVERYONE IS READY", description= f"get on {chonk.mention}", color = discord.Color.green())
+        embed = discord.Embed(title = f"(5/5) EVERYONE IS READY", description= f"get on {printList()}", color = discord.Color.green())
         await ctx.send(embed=embed)
-        await ctx.send(chonk.mention)
+        await ctx.send('<@&'+guildID[0]+'>')
+        cursor.close()
+        db.close()
     else:
         embed = discord.Embed(title = f"({len(playerlist)}/5) Ready", description= f"{ctx.author.mention} has readied up!", color = discord.Color.orange())
         await ctx.send(embed=embed)
         print (ctx.author.mention)
+        cursor.close()
+        db.close()
     
 
 #List all players in queue
@@ -76,7 +136,11 @@ async def clear(ctx):
 @bot.command(name = 'h', aliases = ['Commands'])
 async def Commands(ctx):
     embed = discord.Embed(title = f"Commands:", 
-    description= "-r or -ready    | Readies up \n -l or -list   | Lists all readied players \n -c or -clear | Clears queue (queue clears every day at 12:00 AM", 
+    description= '''`-sr @role or -setrole @role`| Sets role to ping when queue is full
+                    \n `-sc #channel or -setchannel #channel`| Sets channel for bot use
+                    \n `-r or -ready`| Readies up 
+                    \n `-l or -list`| Lists all readied players 
+                    \n `-c or -clear`| Clears queue (queue auto clears 12:00 AM)''',
     color = discord.Color.from_rgb(73,218,189))
     await ctx.send(embed=embed)
 
