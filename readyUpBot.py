@@ -1,13 +1,10 @@
 import discord
 import os
-from discord import player
 import schedule
 import time
 import threading
 import sqlite3
-from threading import Thread
 from discord.ext import commands
-from discord.utils import get
 from dotenv import load_dotenv
 
 
@@ -24,6 +21,15 @@ def printList():
         myString += "\n" + str(x)
     return myString
 
+# @commands.group(invoke_without_command=True)
+# def tester(ctx):
+#     db = sqlite3.connect('main.sqlite')
+#     cursor = db.cursor()
+#     pl = cursor.execute(f"SELECT user_id FROM queue WHERE guild_id = {ctx.guild.id}").fetchall
+#     myString = ""
+#     for x in pl:
+#         myString += "\n" + str(x)
+#     return myString
 
 @bot.event
 async def on_ready():
@@ -90,25 +96,34 @@ async def ready(ctx):
     cursor = db.cursor()
     cursor.execute(f"SELECT role_id FROM main WHERE guild_id = {ctx.guild.id}")
     guildID = cursor.fetchone()
-    if ctx.author in playerlist:
-        embed = discord.Embed(title = f"Cannot Ready", description= "User already ready", color = discord.Color.red())
-        await ctx.send(embed=embed)
-        cursor.close()
-        db.close()
-        return
+
+    # if cursor.execute(f"SELECT role_id FROM main WHERE guild_id = {ctx.guild.id}").fetchone():
+    #     embed = discord.Embed(title = f"Cannot Ready", description= "User already ready", color = discord.Color.red())
+    #     await ctx.send(embed=embed)
+    #     cursor.close()
+    #     db.close()
+    #     return
         
-    playerlist.append(ctx.author.mention)
-    if len(playerlist) == 5:
-        chonk = get(ctx.guild.roles, name= 'chonk')
-        embed = discord.Embed(title = f"(5/5) EVERYONE IS READY", description= f"get on {printList()}", color = discord.Color.green())
+    sql = ("INSERT INTO queue(guild_id, user_id) VALUES(?,?)")
+    val = (ctx.guild.id, ctx.author.mention) 
+    cursor.execute(sql, val)
+    db.commit()
+    playerCounter = cursor.execute(f"SELECT COUNT(user_id) FROM queue WHERE guild_id = {ctx.guild.id}").fetchone()
+    playerCount = playerCounter[0]
+    pl = cursor.execute(f"SELECT user_id FROM queue WHERE guild_id = {ctx.guild.id}").fetchall()
+    separator = '\n'
+    if playerCount == 5:
+        embed = discord.Embed(title = f"(5/5) EVERYONE IS READY", description= f"get on {separator.join(map(str,pl))}", color = discord.Color.green())
+        print(separator.join(map(str,pl)))
         await ctx.send(embed=embed)
         await ctx.send('<@&'+guildID[0]+'>')
+        cursor.execute(f"DELETE FROM queue WHERE guild_id = {ctx.guild.id}")
         cursor.close()
         db.close()
     else:
-        embed = discord.Embed(title = f"({len(playerlist)}/5) Ready", description= f"{ctx.author.mention} has readied up!", color = discord.Color.orange())
+        embed = discord.Embed(title = f"({playerCount}/5) Ready", description= f"{ctx.author.mention} has readied up!", color = discord.Color.orange())
         await ctx.send(embed=embed)
-        print (ctx.author.mention)
+        print(playerCount)
         cursor.close()
         db.close()
     
@@ -116,18 +131,35 @@ async def ready(ctx):
 #List all players in queue
 @bot.command(name = 'l', aliases = ['list','queue','q'])
 async def list(ctx):
-    if playerlist:
-        embed = discord.Embed(title = f"Players Ready:", description= printList(), color = discord.Color.from_rgb(73,218,189))
+    def playerList(ctx):
+        db = sqlite3.connect('main.sqlite')
+        cursor = db.cursor()
+        pl = cursor.execute(f"SELECT user_id FROM queue WHERE guild_id = {ctx.guild.id}").fetchall
+        myString = ""
+        for x in pl:
+            myString += "\n" + str(x)
+        return myString
+    db = sqlite3.connect('main.sqlite')
+    cursor = db.cursor()
+    if cursor.execute(f"SELECT COUNT(user_id) FROM queue WHERE guild_id = {ctx.guild.id}").fetchone():
+        embed = discord.Embed(title = f"Players Ready:", description= playerList(ctx), color = discord.Color.from_rgb(73,218,189))
         await ctx.send(embed=embed)
+        cursor.close()
+        db.close()
     else:
         embed = discord.Embed(title = f"Players Ready:", description= "no one :c", color = discord.Color.from_rgb(73,218,189))
         await ctx.send(embed=embed)
+        cursor.close()
+        db.close()
 
 
 #Clear Queue
 @bot.command(name = 'c', aliases = ['clear'])
 async def clear(ctx):
-    playerlist.clear()
+    db = sqlite3.connect('main.sqlite')
+    cursor = db.cursor()
+    cursor.execute(f"DELETE FROM queue WHERE guild_id = {ctx.guild.id}")
+    db.commit()
     embed = discord.Embed(title = f"Queue Cleared", color = discord.Color.from_rgb(73,218,189))
     await ctx.send(embed=embed)
 
