@@ -1,4 +1,4 @@
-<h1 align="center"><img src="./assets/logo.png" width="60px"> Ready Up! Discord Bot <img src="./assets/logo.png" width="60px"></h1>
+<h1 align="center"><img src="./assets/logo.png" width="40px"> Ready Up! Discord Bot <img src="./assets/logo.png" width="40px"></h1>
 
 
 ## 🚧 Prerequisites
