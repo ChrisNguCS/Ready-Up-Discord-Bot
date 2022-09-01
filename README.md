@@ -26,7 +26,10 @@
 - Clear and reset the queue by using " -c " or " -clear "
 - Of course this is all viewable in the server by using " -h " or " -help "
 
+## 🔮 Planned Features
 
+- Google Calendar implementation for scheduling matches
+- Remove player feature
 
 
 Made with :heart: and Python!
