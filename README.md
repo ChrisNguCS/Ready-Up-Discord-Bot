@@ -1,4 +1,5 @@
-<h1 align="center"><img src="./assets/logo.png" width="30px"> Ready Up! Discord Bot <img src="./assets/logo.png" width="30px"></h1>
+<h1 align="center"><img src="./assets/logo.png" width="60px"> Ready Up! Discord Bot <img src="./assets/logo.png" width="60px"></h1>
+
 
 ## 🚧 Prerequisites
 
@@ -6,7 +7,6 @@
 - [SQLite 3+](https://nodejs.org/en/download/)
 - [Discord.py](https://github.com/Rapptz/discord.py)
 
-> NOTE: Lavalink is needed for music functionality. You need to have a working Lavalink server to make the bot work.
 
 ## 📝 Features
 
